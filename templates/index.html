@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartões ComSoc</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-wrapper">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="{{ url_for('static', filename='templates/brasao.png') }}" alt="Brasão OM" class="sidebar-logo">
+            </div>
+            <nav class="menu">
+                <button class="menu-item active" onclick="trocarAba('inicio', this)">
+                    <i class="fas fa-home"></i> INÍCIO
+                </button>
+                <button class="menu-item" onclick="trocarAba('aniversariantes', this)">
+                    <i class="fas fa-users"></i> ANIVERSARIANTES
+                </button>
+            </nav>
+            <div class="version-tag">v2.0 Edition</div>
+        </aside>
+
+        <main class="content">
+            <div class="bg-pattern"></div>
+            
+            <div id="aba-inicio" class="aba-conteudo ativa">
+                <header class="main-header">
+                    <h1>Sistema de Geração de Cartões</h1>
+                    <p class="subtitle">Cia C/3ª DE</p>
+                </header>
+
+                <section class="processing-center glass">
+                    <form action="/gerar" method="post" enctype="multipart/form-data" id="generatorForm">
+                        
+                        <div class="month-selector">
+                            <label><i class="fas fa-calendar-alt"></i> Mês Base para Geração:</label>
+                            <select name="mes_selecionado" id="seletorMes" class="custom-select">
+                                <option value="{{ meses.atual.num }}" data-ano="{{ meses.atual.ano }}">Mês Atual ({{ meses.atual.nome }})</option>
+                                <option value="{{ meses.proximo.num }}" data-ano="{{ meses.proximo.ano }}">Próximo Mês ({{ meses.proximo.nome }})</option>
+                            </select>
+                            <input type="hidden" name="ano_selecionado" id="anoSelecionado" value="{{ meses.atual.ano }}">
+                        </div>
+
+                        <div class="drop-zone-container">
+                            <div class="drop-zone" id="dz-excel" onclick="document.getElementById('excel').click()">
+                                <i class="fas fa-file-excel file-icon"></i>
+                                <span class="drop-zone-prompt">ARRASTE OU CLIQUE: PLANILHA (.XLSX)</span>
+                                <span class="file-name" id="name-excel">Nenhum arquivo selecionado</span>
+                                <input type="file" name="excel" id="excel" accept=".xlsx, .xls" required hidden>
+                                <i class="fas fa-check-circle status-icon"></i>
+                            </div>
+
+                            <div class="drop-zone" id="dz-template" onclick="document.getElementById('template').click()">
+                                <i class="fas fa-image file-icon"></i>
+                                <span class="drop-zone-prompt">ARRASTE OU CLIQUE: TEMPLATE (.JPG)</span>
+                                <span class="file-name" id="name-template">Nenhum arquivo selecionado</span>
+                                <input type="file" name="template" id="template" accept=".jpg, .jpeg" required hidden>
+                                <i class="fas fa-check-circle status-icon"></i>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn-generate" id="btnSubmit">
+                            <span class="btn-text">GERAR PASTA E ZIP DE DOWNLOAD</span>
+                            <span class="btn-loader fas fa-circle-notch fa-spin"></span>
+                        </button>
+                    </form>
+                </section>
+            </div>
+
+            <div id="aba-aniversariantes" class="aba-conteudo">
+                <header class="main-header">
+                    <h1>Militares do <span class="highlight-month">Mês Selecionado</span></h1>
+                    <p class="subtitle">Pré-visualização (Atualizado ao carregar a planilha)</p>
+                </header>
+
+                <section class="glass table-container">
+                    <div id="tabela-estado-vazio" class="empty-state">
+                        <i class="fas fa-file-excel"></i>
+                        <p>Nenhuma planilha carregada ainda. Carregue o arquivo em <b>Início</b>.</p>
+                    </div>
+
+                    <table class="militar-table" id="tabela-militares" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>DIA</th>
+                                <th>P/GRAD</th>
+                                <th>NOME COMPLETO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo-tabela">
+                            </tbody>
+                    </table>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 1. LÓGICA DE TROCA DE ABAS (SPA)
+        function trocarAba(idAba, elementoMenu) {
+            // Remove classe ativa das abas
+            document.querySelectorAll('.aba-conteudo').forEach(aba => aba.classList.remove('ativa'));
+            document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+            
+            // Ativa a aba clicada
+            document.getElementById('aba-' + idAba).classList.add('ativa');
+            elementoMenu.classList.add('active');
+        }
+
+        // 2. ATUALIZAR ANO OCULTO QUANDO MUDAR O MÊS
+        const seletorMes = document.getElementById('seletorMes');
+        const inputAno = document.getElementById('anoSelecionado');
+        
+        seletorMes.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            inputAno.value = selectedOption.getAttribute('data-ano');
+            
+            // Se já tem um excel carregado, reprocessa a tabela para o novo mês
+            if(document.getElementById('excel').files.length > 0) {
+                carregarTabela(document.getElementById('excel').files[0]);
+            }
+        });
+
+        // 3. UPLOAD VISUAL E PRÉ-PROCESSAMENTO AJAX
+        const excelInput = document.getElementById('excel');
+        
+        excelInput.addEventListener('change', () => {
+            if (excelInput.files.length > 0) {
+                document.getElementById('name-excel').textContent = excelInput.files[0].name;
+                excelInput.closest('.drop-zone').classList.add('file-filled');
+                carregarTabela(excelInput.files[0]);
+            }
+        });
+
+        const templateInput = document.getElementById('template');
+        templateInput.addEventListener('change', () => {
+            if (templateInput.files.length > 0) {
+                document.getElementById('name-template').textContent = templateInput.files[0].name;
+                templateInput.closest('.drop-zone').classList.add('file-filled');
+            }
+        });
+
+        // 4. FUNÇÃO QUE LÊ A PLANILHA EM SEGUNDO PLANO PARA MONTAR A TABELA
+        function carregarTabela(file) {
+            const formData = new FormData();
+            formData.append('excel', file);
+            formData.append('mes_alvo', seletorMes.value);
+
+            fetch('/api/analisar_planilha', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('corpo-tabela');
+                tbody.innerHTML = ''; // Limpa tabela
+
+                if(data.erro) {
+                    alert('Erro ao ler planilha: ' + data.erro);
+                    return;
+                }
+
+                if(data.militares.length === 0) {
+                    document.getElementById('tabela-estado-vazio').style.display = 'block';
+                    document.getElementById('tabela-estado-vazio').querySelector('p').innerHTML = 'Nenhum aniversariante encontrado para o mês selecionado.';
+                    document.getElementById('tabela-militares').style.display = 'none';
+                } else {
+                    document.getElementById('tabela-estado-vazio').style.display = 'none';
+                    document.getElementById('tabela-militares').style.display = 'table';
+
+                    data.militares.forEach(m => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="td-dia">${m.dia}</td>
+                            <td>${m.pgrad}</td>
+                            <td>${m.nome}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            })
+            .catch(error => console.error('Erro:', error));
+        }
+
+        // 5. LOADING NO BOTÃO DE GERAR ZIP
+        document.getElementById('generatorForm').addEventListener('submit', function() {
+            const btn = document.getElementById('btnSubmit');
+            btn.classList.add('loading');
+            btn.querySelector('.btn-text').textContent = 'PROCESSANDO CARTÕES...';
+            
+            // Retira o loading após alguns segundos para permitir novo uso
+            setTimeout(() => {
+                btn.classList.remove('loading');
+                btn.querySelector('.btn-text').textContent = 'GERAR PASTA E ZIP DE DOWNLOAD';
+            }, 6000);
+        });
+    </script>
+</body>
+</html>

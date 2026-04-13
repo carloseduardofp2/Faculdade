@@ -1,0 +1,223 @@
+:root {
+    --primary-blue: #2563eb;
+    --accent-green: #10b981;
+    --dark-bg: #0b0f19;
+    --sidebar-bg: #111827;
+    --glass-bg: rgba(31, 41, 55, 0.7);
+    --text-white: #f3f4f6;
+    --text-muted: #9ca3af;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+body { background: var(--dark-bg); color: var(--text-white); overflow: hidden; }
+
+.app-wrapper { display: flex; height: 100vh; }
+
+/* SIDEBAR */
+.sidebar {
+    width: 280px;
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    padding: 2rem 1.5rem;
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+.sidebar-logo { width: 228px; margin-bottom: 2rem; }
+
+.menu { flex: 1; }
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    transition: 0.3s;
+}
+
+.menu-item i { margin-right: 12px; font-size: 2rem; }
+.menu-item:hover { background: rgba(255,255,255,0.05); color: white; }
+.menu-item.active { background: var(--primary-blue); color: white; box-shadow: 0 4px 15px rgba(37,99,235,0.3); }
+
+.version-tag { font-size: 0.75rem; color: #4b5563; font-weight: bold; }
+
+/* CONTEÚDO PRINCIPAL */
+/* Altere o .content para permitir rolagem vertical */
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Remova ou altere o justify-content: center; 
+       Se o conteúdo for maior que a tela, o 'center' pode cortar o topo da lista. */
+    justify-content: flex-start; 
+    padding: 4rem 2rem; /* Reduzi um pouco o padding lateral */
+    position: relative;
+    overflow-y: auto; /* Habilita a rolagem apenas na área de conteúdo */
+}
+
+/* Opcional: Para um visual mais limpo, adicione uma barra de rolagem estilizada */
+.content::-webkit-scrollbar {
+    width: 8px;
+}
+.content::-webkit-scrollbar-thumb {
+    background: var(--sidebar-bg);
+    border-radius: 10px;
+}
+
+.main-header { text-align: center; margin-bottom: 3rem; }
+.main-header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; text-shadow: 0 0 20px rgba(255,255,255,0.1); }
+.subtitle { color: var(--text-muted); font-size: 2rem; }
+.highlight-month { color: var(--accent-green); font-weight: bold; }
+
+/* CARD CENTRAL */
+.glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 3rem;
+    width: 100%;
+    max-width: 850px;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    margin-bottom: 2rem; /* Adicionado para não cortar o final da lista */
+}
+
+.drop-zone-container { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2.5rem; }
+
+.drop-zone {
+    border: 2px dashed #374151;
+    padding: 2rem;
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.3s;
+    background: rgba(0,0,0,0.2);
+}
+
+.drop-zone:hover { border-color: var(--primary-blue); background: rgba(37,99,235,0.05); }
+
+.file-icon { font-size: 2.5rem; color: var(--primary-blue); margin-bottom: 1rem; display: block; }
+.drop-zone-prompt { font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 8px; }
+.file-name { font-size: 0.75rem; color: var(--text-muted); word-break: break-all; }
+
+.file-filled { border-color: var(--accent-green) !important; }
+.file-filled .file-icon { color: var(--accent-green); }
+
+/* BOTÃO GERAR */
+.btn-generate {
+    width: 100%;
+    padding: 1.2rem;
+    background: var(--accent-green);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.4s;
+    box-shadow: 0 0 20px rgba(16,185,129,0.2);
+}
+
+.btn-generate:hover { transform: translateY(-3px); filter: brightness(1.1); box-shadow: 0 10px 25px rgba(16,185,129,0.4); }
+
+.btn-loader { display: none; margin-left: 10px; }
+.loading .btn-loader { display: inline-block; }
+
+/* --- ADIÇÕES PARA O SISTEMA DE ABAS (SPA) E SELEÇÃO DE MÊS --- */
+
+/* Esconde todas as abas por padrão */
+.aba-conteudo {
+    display: none;
+    animation: fadeIn 0.4s ease;
+}
+
+/* Mostra apenas a aba ativa */
+.aba-conteudo.ativa {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Ajuste dos botões do menu para se comportarem como links */
+button.menu-item {
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+/* Estilo do Seletor de Mês */
+.month-selector {
+    background: rgba(0,0,0,0.2);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.month-selector label {
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.custom-select {
+    background: var(--dark-bg);
+    color: white;
+    border: 1px solid var(--primary-blue);
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 1rem;
+    outline: none;
+    cursor: pointer;
+    flex: 1;
+}
+
+.custom-select:focus {
+    box-shadow: 0 0 10px rgba(37,99,235,0.3);
+}
+
+/* Ajustes da Tabela */
+.militar-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.militar-table th {
+    text-align: left;
+    padding: 15px;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+    color: var(--text-muted);
+}
+
+.militar-table td { 
+    padding: 15px; 
+    border-bottom: 1px solid rgba(255,255,255,0.05); 
+}
+
+.td-dia { 
+    font-weight: bold; 
+    color: var(--accent-green); 
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    opacity: 0.5;
+}
+
+.empty-state i { 
+    font-size: 4rem; 
+    margin-bottom: 1rem; 
+}
