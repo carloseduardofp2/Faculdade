@@ -1,7 +1,9 @@
+import gc
 import os
 import re
 import io
 import zipfile
+import tempfile
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, send_file, jsonify
 import pandas as pd
@@ -38,11 +40,12 @@ def formatar_nome_proprio(texto):
 
 def desenhar_identidade_visual(draw, largura_img, y, posto, nome_completo, nome_guerra):
     nome_exibicao = formatar_nome_proprio(nome_completo)
-    nome_guerra_limpo = str(nome_guerra).strip().upper()
+    nome_upper = nome_exibicao.upper()
     
-    parte_para_negrito = re.search(r"([A-Z]{3,})", nome_guerra_limpo)
-    alvo_negrito = parte_para_negrito.group(1) if parte_para_negrito else nome_guerra_limpo
-
+    # Extrai as partes do nome de guerra, ignorando pontos (ex: "A. Gomes" vira ["A", "GOMES"])
+    # O \w+ pega apenas blocos de letras, descartando as pontuações automaticamente
+    tokens_guerra = re.findall(r'\w+', str(nome_guerra).upper())
+    
     f_reg_path = "static/fontes/cambria.ttc"
     f_neg_path = "static/fontes/cambriab.ttf"
 
@@ -53,15 +56,42 @@ def desenhar_identidade_visual(draw, largura_img, y, posto, nome_completo, nome_
         f_reg = f_neg = ImageFont.load_default()
 
     mascara_negrito = [0] * len(nome_exibicao)
-    for m in re.finditer(r"\b" + re.escape(alvo_negrito) + r"\b", nome_exibicao.upper()):
-        for i in range(m.start(), m.end()): mascara_negrito[i] = 1
+    
+    # Localiza todas as palavras no nome de exibição e guarda a posição delas
+    palavras_exibicao = []
+    for m in re.finditer(r'\w+', nome_upper):
+        palavras_exibicao.append({
+            "texto": m.group(0),
+            "inicio": m.start(),
+            "fim": m.end(),
+            "usada": False
+        })
+        
+    # Cruza as palavras do Nome de Guerra com as do Nome Completo
+    for token in tokens_guerra:
+        for p in palavras_exibicao:
+            if not p["usada"]:
+                # REGRA 1: Se o token for apenas 1 letra (inicial) e a palavra começar com ela
+                if len(token) == 1 and p["texto"].startswith(token):
+                    mascara_negrito[p["inicio"]] = 1 # Negrito SÓ na 1ª letra
+                    p["usada"] = True
+                    break # Vai para o próximo pedaço do nome de guerra
+                
+                # REGRA 2: Se for um nome maior, exige correspondência exata
+                elif len(token) > 1 and p["texto"] == token:
+                    for i in range(p["inicio"], p["fim"]):
+                        mascara_negrito[i] = 1 # Negrito na palavra toda
+                    p["usada"] = True
+                    break
 
+    # --- DESENHO DAS LETRAS NA IMAGEM ---
     w_posto = draw.textlength(f"{posto} ", font=f_neg)
     largura_nome = sum([draw.textlength(l, font=(f_neg if mascara_negrito[i] else f_reg)) for i, l in enumerate(nome_exibicao)])
     x_atual = (largura_img - (w_posto + largura_nome)) / 2
 
     draw.text((x_atual, y), f"{posto} ", font=f_neg, fill=(0, 0, 0))
     x_atual += w_posto
+    
     for i, letra in enumerate(nome_exibicao):
         f = f_neg if mascara_negrito[i] else f_reg
         draw.text((x_atual, y), letra, font=f, fill=(0, 0, 0))
@@ -90,33 +120,60 @@ def processar_cartao(template_img, linha, mes_num, ano_ref):
     draw.text((limite_X - w_data, 1160), txt_data, font=f_data, fill=(0, 0, 0))
     return img
 
-def gerar_pdf_impressao(lista_imagens):
-    if not lista_imagens:
+def gerar_pdf_impressao(lista_imagens_processadas):
+    if not lista_imagens_processadas: 
         return None
     
     largura_a4, altura_a4 = 2480, 3508 
-    paginas = []
+    temp_dir = tempfile.gettempdir()
+    caminhos_paginas = []
     
-    for i in range(0, len(lista_imagens), 2):
+    for i in range(0, len(lista_imagens_processadas), 2):
         folha = Image.new("RGB", (largura_a4, altura_a4), (255, 255, 255))
-        par = lista_imagens[i:i+2]
+        par = lista_imagens_processadas[i:i+2]
         
-        for idx, cartao in enumerate(par):
-            largura_max = largura_a4 - 200
-            proporcao = largura_max / cartao.width
-            nova_altura = int(cartao.height * proporcao)
-            cartao_res = cartao.resize((largura_max, nova_altura), Image.Resampling.LANCZOS)
+        for idx, caminho_img in enumerate(par):
+            with Image.open(caminho_img) as cartao:
+                largura_max = largura_a4 - 200
+                proporcao = largura_max / cartao.width
+                nova_altura = int(cartao.height * proporcao)
+                cartao_res = cartao.resize((largura_max, nova_altura), Image.Resampling.LANCZOS)
+                
+                y_offset = 200 if idx == 0 else (altura_a4 // 2) + 100
+                folha.paste(cartao_res, ((largura_a4 - largura_max) // 2, y_offset))
+                del cartao_res
+        
+        # O SEGREDO: Salvar como .jpg temporariamente para o Pillow conseguir reabrir
+        caminho_pg = os.path.join(temp_dir, f"folha_temp_{i}.jpg")
+        folha.save(caminho_pg, "JPEG", quality=85)
+        caminhos_paginas.append(caminho_pg)
+        
+        folha.close() # Libera memória da folha atual
+        gc.collect()
+
+    if caminhos_paginas:
+        pdf_io = io.BytesIO()
+        # Abre as folhas JPG e as agrupa no PDF final
+        imgs_para_pdf = [Image.open(p) for p in caminhos_paginas]
+        
+        # O formato PDF é definido apenas aqui no salvamento final
+        imgs_para_pdf[0].save(
+            pdf_io, 
+            format="PDF", 
+            save_all=True, 
+            append_images=imgs_para_pdf[1:]
+        )
+        
+        # Fecha as imagens e limpa os arquivos temporários do Windows
+        for img in imgs_para_pdf: 
+            img.close()
+        for p in caminhos_paginas: 
+            try: os.remove(p)
+            except: pass
             
-            x_offset = (largura_a4 - largura_max) // 2
-            y_offset = 200 if idx == 0 else (altura_a4 // 2) + 100
-            folha.paste(cartao_res, (x_offset, y_offset))
-            
-        paginas.append(folha)
-    
-    pdf_io = io.BytesIO()
-    paginas[0].save(pdf_io, format="PDF", save_all=True, append_images=paginas[1:])
-    pdf_io.seek(0)
-    return pdf_io
+        pdf_io.seek(0)
+        return pdf_io
+    return None
 
 # --- ROTAS ---
 @app.route("/")
@@ -138,7 +195,6 @@ def analisar_planilha():
         df["DT_NASCIMENTO"] = pd.to_datetime(df["DT_NASCIMENTO"], errors="coerce")
         df = df.dropna(subset=["DT_NASCIMENTO"])
         
-        # AJUSTE DA ORDENAÇÃO: Ordena especificamente pelo DIA do mês
         anivs = df[df["DT_NASCIMENTO"].dt.month == mes_alvo].copy()
         anivs = anivs.sort_values(by="DT_NASCIMENTO", key=lambda x: x.dt.day)
         
@@ -170,7 +226,6 @@ def gerar():
         df["DT_NASCIMENTO"] = pd.to_datetime(df["DT_NASCIMENTO"], errors="coerce")
         df = df.dropna(subset=["DT_NASCIMENTO"])
         
-        # AJUSTE DA ORDENAÇÃO: Garante que o PDF e as imagens sigam a ordem dos DIAS
         anivs = df[df["DT_NASCIMENTO"].dt.month == mes_selecionado].copy()
         anivs = anivs.sort_values(by="DT_NASCIMENTO", key=lambda x: x.dt.day)
         
@@ -179,25 +234,38 @@ def gerar():
 
         template_img = Image.open(file_template).convert("RGB")
         zip_buffer = io.BytesIO()
-        lista_imagens_processadas = []
+        lista_imagens_processadas = [] # Mantendo o nome da lista
 
-        with zipfile.ZipFile(zip_buffer, "w") as zf:
-            for _, row in anivs.iterrows():
-                img_final = processar_cartao(template_img, row, mes_selecionado, ano_selecionado)
-                lista_imagens_processadas.append(img_final)
-                
-                img_byte_arr = io.BytesIO()
-                img_final.save(img_byte_arr, format="JPEG", quality=95)
-                
-                dia_aniv = int(row["DT_NASCIMENTO"].day)
-                guerra = str(row.get("NOME_GUERRA", "MILITAR")).replace(" ", "_").upper()
-                nome_arquivo = f"{dia_aniv:02d}_{guerra}.jpg"
-                zf.writestr(f"imagens/{nome_arquivo}", img_byte_arr.getvalue())
+        # Criamos um diretório temporário para salvar as fotos intermediárias
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            with zipfile.ZipFile(zip_buffer, "w") as zf:
+                for _, row in anivs.iterrows():
+                    img_final = processar_cartao(template_img, row, mes_selecionado, ano_selecionado)
+                    
+                    dia_aniv = int(row["DT_NASCIMENTO"].day)
+                    guerra = str(row.get("NOME_GUERRA", "MILITAR")).replace(" ", "_").upper()
+                    nome_arquivo = f"{dia_aniv:02d}_{guerra}.jpg"
+                    
+                    # Salva no disco temporário para aliviar a RAM
+                    caminho_temp = os.path.join(tmp_dir, nome_arquivo)
+                    img_final.save(caminho_temp, format="JPEG", quality=85)
+                    
+                    # Guardamos o CAMINHO na lista, não o objeto de imagem
+                    lista_imagens_processadas.append(caminho_temp)
+                    
+                    # Escreve no ZIP pegando do disco
+                    zf.write(caminho_temp, f"imagens/{nome_arquivo}")
+                    
+                    # Limpa o objeto da RAM imediatamente
+                    del img_final
+                    gc.collect()
 
-            pdf_buffer = gerar_pdf_impressao(lista_imagens_processadas)
-            if pdf_buffer:
-                zf.writestr(f"IMPRIMIR_{MESES_EXTENSO[mes_selecionado].upper()}.pdf", pdf_buffer.getvalue())
+                # Passa a lista de caminhos para a função do PDF
+                pdf_buffer = gerar_pdf_impressao(lista_imagens_processadas)
+                if pdf_buffer:
+                    zf.writestr(f"IMPRIMIR_{MESES_EXTENSO[mes_selecionado].upper()}.pdf", pdf_buffer.getvalue())
 
+        template_img.close()
         zip_buffer.seek(0)
         return send_file(zip_buffer, mimetype="application/zip", as_attachment=True, 
                          download_name=f"Cartoes_{MESES_EXTENSO[mes_selecionado]}.zip")
