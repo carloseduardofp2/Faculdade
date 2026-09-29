@@ -1,24 +1,19 @@
-# Usa uma imagem leve do Python
-FROM python:3.10-slim
+FROM node:22-alpine AS frontend
 
-# Define o diretório de trabalho
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY index.html vite.config.js ./
+COPY src ./src
+COPY static ./static
+RUN npm run build
 
-# Instala dependências do sistema necessárias para o Pillow e fontes
-RUN apt-get update && apt-get install -y \
-    libfreetype6-dev \
-    libjpeg-dev \
-    zlib1g-dev \
-    && rm -rf /var/lib/apt/lists/*
+FROM python:3.12-slim
 
-# Copia os arquivos do projeto
-COPY . .
+WORKDIR /app
+COPY requirements-web.txt app.py ./
+RUN pip install --no-cache-dir -r requirements-web.txt
+COPY --from=frontend /app/dist ./dist
 
-# Instala as bibliotecas do Python
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Expõe a porta que o Hugging Face exige
 EXPOSE 7860
-
-# Comando para rodar o app usando Gunicorn na porta 7860
 CMD ["gunicorn", "-b", "0.0.0.0:7860", "app:app", "--timeout", "120"]

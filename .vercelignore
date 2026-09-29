@@ -1,0 +1,10 @@
+.git
+.venv
+venv
+uploads
+node_modules
+dist
+app.py
+requirements*.txt
+Dockerfile
+templates

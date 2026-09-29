@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#173f2e" />
+    <meta
+      name="description"
+      content="Gerador de cartões de aniversário da Comunicação Social da Cia C/3ª DE"
+    />
+    <title>Cartões ComSoc</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <div class="brand">
+          <img src="/templates/brasao.png" alt="Brasão da Cia C/3ª DE" />
+          <div>
+            <strong>Cartões ComSoc</strong>
+            <span>Cia C/3ª DE</span>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-item active" data-view="import" type="button">
+            <span class="nav-number">1</span>
+            <span><strong>Importar</strong><small>Planilha e modelo</small></span>
+          </button>
+          <button class="nav-item" data-view="people" type="button" disabled>
+            <span class="nav-number">2</span>
+            <span><strong>Conferir</strong><small>Aniversariantes</small></span>
+          </button>
+          <button class="nav-item" data-view="editor" type="button" disabled>
+            <span class="nav-number">3</span>
+            <span><strong>Editar modelo</strong><small>Posição dos textos</small></span>
+          </button>
+          <button class="nav-item" data-view="export" type="button" disabled>
+            <span class="nav-number">4</span>
+            <span><strong>Exportar</strong><small>Imagens e PDF</small></span>
+          </button>
+        </nav>
+
+        <div class="sidebar-foot">
+          <span class="privacy-dot"></span>
+          <span>Processamento local<br /><small>Os arquivos não são enviados.</small></span>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Abrir menu">☰</button>
+          <div>
+            <p class="eyebrow">Comunicação Social</p>
+            <h1 id="pageTitle">Preparar cartões</h1>
+          </div>
+          <div class="period-badge" id="periodBadge"></div>
+        </header>
+
+        <section class="view active" id="view-import" aria-labelledby="importTitle">
+          <div class="section-heading">
+            <div>
+              <h2 id="importTitle">Arquivos da geração</h2>
+              <p>Carregue a relação de militares e a arte que servirá como fundo.</p>
+            </div>
+            <button class="btn btn-quiet" id="loadExample" type="button">Usar modelo padrão</button>
+          </div>
+
+          <div class="upload-grid">
+            <label class="upload-card" id="sheetDrop">
+              <input id="sheetInput" type="file" accept=".xlsx,.xls,.ods,.csv" />
+              <span class="upload-icon sheet-icon" aria-hidden="true">▦</span>
+              <strong>Planilha de militares</strong>
+              <span class="upload-help">XLSX, XLS, ODS ou CSV</span>
+              <span class="file-pill" id="sheetFileName">Selecionar arquivo</span>
+            </label>
+
+            <label class="upload-card" id="imageDrop">
+              <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp" />
+              <span class="upload-icon image-icon" aria-hidden="true">▧</span>
+              <strong>Imagem de fundo</strong>
+              <span class="upload-help">JPG, PNG ou WEBP</span>
+              <span class="file-pill" id="imageFileName">Selecionar arquivo</span>
+            </label>
+          </div>
+
+          <section class="period-planner" aria-labelledby="periodPlannerTitle">
+            <div class="period-planner-copy">
+              <span class="panel-label">Período</span>
+              <h3 id="periodPlannerTitle">Mês de entrega dos cartões</h3>
+              <p>Escolha qualquer mês e o ano em que os cartões serão entregues.</p>
+            </div>
+            <div class="period-fields">
+              <label>Mês<select id="periodMonth" aria-label="Mês dos aniversariantes"></select></label>
+              <label>Ano<input id="periodYear" type="number" min="2000" max="2100" aria-label="Ano de entrega" /></label>
+            </div>
+          </section>
+
+          <div class="status-panel" id="importStatus" aria-live="polite">
+            <div class="status-empty">
+              <span class="status-mark">i</span>
+              <div><strong>Aguardando os arquivos</strong><p>A planilha precisa conter posto/graduação, nome, nome de guerra e data de nascimento.</p></div>
+            </div>
+          </div>
+
+          <div class="page-actions">
+            <span></span>
+            <button class="btn btn-primary" id="goPeople" type="button" disabled>Conferir aniversariantes <span>→</span></button>
+          </div>
+        </section>
+
+        <section class="view" id="view-people" aria-labelledby="peopleTitle">
+          <div class="section-heading">
+            <div>
+              <h2 id="peopleTitle">Conferir aniversariantes</h2>
+              <p>Revise os nomes e o destaque do nome de guerra antes da geração.</p>
+            </div>
+            <div class="summary-counter"><strong id="includedCount">0</strong><span>cartões selecionados</span></div>
+          </div>
+
+          <div class="month-tabs" id="monthTabs" role="tablist"></div>
+
+          <div class="toolbar">
+            <label class="search-field">
+              <span aria-hidden="true">⌕</span>
+              <input id="peopleSearch" type="search" placeholder="Buscar por nome ou posto/graduação" />
+            </label>
+            <button class="btn btn-quiet" id="selectAll" type="button">Selecionar todos</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="people-table">
+              <thead>
+                <tr>
+                  <th class="check-col"><span class="sr-only">Incluir</span></th>
+                  <th>Dia</th>
+                  <th>P/Grad</th>
+                  <th>Nome no cartão</th>
+                  <th>Nome de guerra</th>
+                  <th>Situação</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="peopleBody"></tbody>
+            </table>
+            <div class="empty-table" id="emptyPeople" hidden>Nenhum aniversariante encontrado neste período.</div>
+          </div>
+
+          <div class="page-actions">
+            <button class="btn btn-secondary" data-back="import" type="button">← Voltar</button>
+            <button class="btn btn-primary" id="goEditor" type="button">Editar modelo <span>→</span></button>
+          </div>
+        </section>
+
+        <section class="view editor-view" id="view-editor" aria-labelledby="editorTitle">
+          <div class="section-heading">
+            <div>
+              <h2 id="editorTitle">Editor do modelo</h2>
+              <p>Arraste os textos sobre a arte. O ajuste será aplicado a todos os cartões.</p>
+            </div>
+            <div class="editor-actions">
+              <button class="btn btn-quiet" id="undoLayout" type="button" title="Desfazer">↶</button>
+              <button class="btn btn-quiet" id="redoLayout" type="button" title="Refazer">↷</button>
+              <button class="btn btn-quiet" id="resetLayout" type="button">Restaurar padrão</button>
+            </div>
+          </div>
+
+          <div class="editor-grid">
+            <div class="canvas-panel">
+              <div class="preview-toolbar">
+                <label>Prévia com
+                  <select id="previewPerson"></select>
+                </label>
+                <button class="text-button" id="showLongest" type="button">Testar nome mais longo</button>
+              </div>
+              <div class="canvas-stage" id="canvasStage">
+                <canvas id="cardCanvas"></canvas>
+              </div>
+              <p class="canvas-tip">Clique em um texto e arraste. Use as setas do teclado para ajustes finos.</p>
+            </div>
+
+            <aside class="properties-panel">
+              <div class="panel-section">
+                <span class="panel-label">Camadas</span>
+                <div id="layersList"></div>
+                <button class="add-layer-button" id="addTextLayer" type="button">＋ Adicionar texto</button>
+              </div>
+
+              <div class="panel-section controls-section">
+                <span class="panel-label">Texto selecionado</span>
+                <div class="custom-text-controls" id="customTextControls" hidden>
+                  <label>Conteúdo
+                    <input id="customText" type="text" maxlength="160" placeholder="Digite o texto adicional" />
+                  </label>
+                  <label class="switch-row"><span>Texto em negrito</span><input id="customBold" type="checkbox" /><i></i></label>
+                  <button class="remove-layer-button" id="removeTextLayer" type="button">Remover este texto</button>
+                </div>
+                <label>Tamanho da fonte
+                  <div class="range-row"><input id="fontSize" type="range" min="24" max="120" step="1" /><output id="fontSizeValue"></output></div>
+                </label>
+                <label>Largura máxima
+                  <div class="range-row"><input id="maxWidth" type="range" min="500" max="2200" step="1" /><output id="maxWidthValue"></output></div>
+                </label>
+                <label>Cor
+                  <div class="color-row"><input id="textColor" type="color" /><input id="textColorHex" type="text" maxlength="7" /></div>
+                </label>
+                <fieldset>
+                  <legend>Alinhamento</legend>
+                  <div class="segmented" id="alignControls">
+                    <button data-align="left" type="button" title="Alinhar à esquerda">☰</button>
+                    <button data-align="center" type="button" title="Centralizar">≡</button>
+                    <button data-align="right" type="button" title="Alinhar à direita">☷</button>
+                  </div>
+                </fieldset>
+                <label class="switch-row"><span>Ajustar fonte automaticamente<small>Reduz nomes que ultrapassarem o limite</small></span><input id="autoFit" type="checkbox" /><i></i></label>
+              </div>
+
+              <div class="panel-section preset-section">
+                <span class="panel-label">Presets</span>
+                <select id="presetSelect"><option value="">Modelo padrão</option></select>
+                <div class="button-pair">
+                  <button class="btn btn-secondary" id="savePreset" type="button">Salvar preset</button>
+                  <button class="btn btn-secondary" id="exportPreset" type="button">Exportar</button>
+                </div>
+                <label class="file-link">Importar preset<input id="importPreset" type="file" accept="application/json,.json" /></label>
+              </div>
+            </aside>
+          </div>
+
+          <div class="page-actions">
+            <button class="btn btn-secondary" data-back="people" type="button">← Voltar</button>
+            <button class="btn btn-primary" id="goExport" type="button">Preparar exportação <span>→</span></button>
+          </div>
+        </section>
+
+        <section class="view" id="view-export" aria-labelledby="exportTitle">
+          <div class="section-heading">
+            <div>
+              <h2 id="exportTitle">Exportar cartões</h2>
+              <p>Baixe os cartões individuais e o PDF de impressão em um único pacote.</p>
+            </div>
+          </div>
+
+          <div class="export-grid">
+            <div class="export-card">
+              <span class="export-step">1</span>
+              <div><strong>Período</strong><p>Confirme o mês que entrará no pacote.</p></div>
+              <div class="period-checks" id="periodChecks"></div>
+            </div>
+            <div class="export-card">
+              <span class="export-step">2</span>
+              <div><strong>Formato das imagens</strong><p>JPG é recomendado para WhatsApp.</p></div>
+              <div class="segmented wide" id="formatControls">
+                <button class="active" data-format="jpeg" type="button">JPG</button>
+                <button data-format="png" type="button">PNG</button>
+              </div>
+            </div>
+            <div class="export-card">
+              <span class="export-step">3</span>
+              <div><strong>PDF de impressão</strong><p>Duas imagens por folha A4.</p></div>
+              <label class="switch-row compact"><span>Marcas de corte</span><input id="cropMarks" type="checkbox" checked /><i></i></label>
+            </div>
+          </div>
+
+          <div class="export-summary">
+            <div><span>Cartões individuais</span><strong id="exportCardCount">0</strong></div>
+            <div><span>Páginas estimadas</span><strong id="exportPageCount">0</strong></div>
+            <div><span>Pacote final</span><strong>ZIP + PDF</strong></div>
+          </div>
+
+          <div class="progress-box" id="progressBox" hidden>
+            <div><strong id="progressLabel">Preparando...</strong><span id="progressPercent">0%</span></div>
+            <progress id="exportProgress" max="100" value="0"></progress>
+          </div>
+
+          <div class="page-actions">
+            <button class="btn btn-secondary" data-back="editor" type="button">← Voltar</button>
+            <button class="btn btn-primary btn-download" id="generatePackage" type="button">Gerar pacote para download</button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="nameDialog" class="name-dialog">
+      <form method="dialog">
+        <div class="dialog-head">
+          <div><p class="eyebrow">Ajuste manual</p><h2>Negrito do nome de guerra</h2></div>
+          <button class="dialog-close" value="cancel" aria-label="Fechar">×</button>
+        </div>
+        <p class="dialog-intro">Clique em cada palavra para alternar entre sem destaque, inicial em negrito e palavra inteira em negrito.</p>
+        <div class="name-token-editor" id="nameTokenEditor"></div>
+        <div class="token-legend"><span><i class="none"></i>Sem destaque</span><span><i class="initial"></i>Inicial</span><span><i class="full"></i>Palavra inteira</span></div>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" id="restoreNameMatch" type="button">Usar reconhecimento automático</button>
+          <button class="btn btn-primary" id="saveNameMatch" value="default">Aplicar ajuste</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="presetDialog" class="name-dialog preset-dialog">
+      <form method="dialog">
+        <div class="dialog-head">
+          <div><p class="eyebrow">Salvar configuração</p><h2>Novo preset</h2></div>
+          <button class="dialog-close" value="cancel" aria-label="Fechar">×</button>
+        </div>
+        <label class="dialog-field">Nome do preset
+          <input id="presetName" type="text" maxlength="60" autocomplete="off" />
+        </label>
+        <div class="dialog-actions end">
+          <button class="btn btn-secondary" value="cancel">Cancelar</button>
+          <button class="btn btn-primary" id="confirmPreset" value="default">Salvar preset</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

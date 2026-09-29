@@ -1,0 +1,70 @@
+@media (max-width: 1050px) {
+  .app-shell { grid-template-columns: 230px minmax(0,1fr); }
+  .sidebar { padding-inline: 15px; }
+  .main-content { padding-inline: 30px; }
+  .editor-grid { grid-template-columns: 1fr; }
+  .properties-panel { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .panel-section { border-bottom: 0; border-right: 1px solid var(--line); }
+  .panel-section:last-child { border-right: 0; }
+  .export-grid { grid-template-columns: 1fr; }
+  .export-card { min-height: 0; }
+}
+
+@media (max-width: 760px) {
+  .app-shell { display: block; }
+  .sidebar { position: fixed; left: 0; transform: translateX(-105%); width: min(290px, 85vw); transition: transform .2s ease; box-shadow: 20px 0 50px rgba(0,0,0,.2); }
+  .sidebar.open { transform: none; }
+  .main-content { padding: 0 18px 42px; }
+  .topbar { min-height: 96px; }
+  .mobile-menu { display: block; }
+  .period-badge { display: none; }
+  .upload-grid { grid-template-columns: 1fr; }
+  .upload-card { min-height: 185px; }
+  .period-planner { grid-template-columns: 1fr; }
+  .period-fields { grid-template-columns: 1fr 94px; }
+  .section-heading { align-items: flex-start; flex-direction: column; }
+  .status-ready, .status-error { flex-wrap: wrap; }
+  .status-details { width: 100%; margin-left: 39px; }
+  .table-wrap { overflow-x: auto; }
+  .people-table { min-width: 850px; }
+  .toolbar { align-items: stretch; flex-direction: column; }
+  .search-field { min-width: 100%; }
+  .properties-panel { display: block; }
+  .panel-section { border-right: 0; border-bottom: 1px solid var(--line); }
+  .editor-actions { flex-wrap: wrap; }
+  .export-summary { grid-template-columns: 1fr; gap: 14px; }
+  .export-summary div, .export-summary div:first-child, .export-summary div:last-child { padding: 0 0 14px; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.14); }
+  .export-summary div:last-child { padding-bottom: 0; border-bottom: 0; }
+  .page-actions { gap: 9px; }
+  .page-actions .btn { flex: 1; }
+  .dialog-actions { flex-direction: column-reverse; }
+}
+
+@media (max-width: 480px) {
+  .main-content { padding: 0 12px 32px; }
+  .topbar { min-height: 82px; }
+  .topbar h1 { font-size: 25px; }
+  .view { padding-top: 26px; }
+  .upload-card { min-height: 160px; padding: 22px 16px; }
+  .period-planner, .status-panel, .export-card { padding: 16px; }
+  .period-fields { grid-template-columns: 1fr; }
+  .status-details { margin-left: 0; }
+  .month-tabs { max-width: 100%; overflow-x: auto; }
+  .preview-toolbar { align-items: stretch; flex-direction: column; }
+  .preview-toolbar label { align-items: stretch; flex-direction: column; }
+  .preview-toolbar select { width: 100%; min-width: 0; }
+  .canvas-stage { min-height: 260px; padding: 10px; }
+  .editor-actions { width: 100%; }
+  .editor-actions .btn:last-child { flex: 1; }
+  .button-pair { grid-template-columns: 1fr; }
+  .page-actions { align-items: stretch; flex-direction: column-reverse; }
+  .page-actions .btn, .btn-download { width: 100%; min-width: 0; }
+  .name-dialog form { padding: 18px; }
+  .token-legend { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .toast-region { right: 12px; bottom: 12px; left: 12px; }
+  .toast { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
