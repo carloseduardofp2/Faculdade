@@ -1,7 +1,7 @@
 import "./styles.css";
 import "./styles/responsive.css";
 import { ensureCardFonts } from "./canvas.js";
-import { elements, PAGE_TITLES, $ } from "./app-context.js";
+import { elements, PAGE_TITLES, $, showToast } from "./app-context.js";
 import { setupImportFeature } from "./features/import-controller.js";
 import { renderPeoplePage, setupPeopleFeature } from "./features/people-controller.js";
 import { renderEditor, setupEditorFeature, showEditorPage } from "./features/editor-controller.js";
@@ -34,8 +34,14 @@ async function initialize() {
   setupPeopleFeature();
   setupEditorFeature();
   setupExportFeature();
-  await ensureCardFonts();
-  await setupImportFeature({ onBackgroundChange: renderEditor });
+  const importReady = setupImportFeature({ onBackgroundChange: renderEditor });
+  ensureCardFonts().then(renderEditor).catch(() => {
+    showToast("As fontes do modelo não carregaram. Você pode importar os arquivos, mas confira a aparência dos textos antes de imprimir.", "error");
+  });
+  await importReady;
 }
 
-initialize();
+initialize().catch((error) => {
+  console.error("Falha ao iniciar o aplicativo", error);
+  showToast("Não foi possível iniciar o aplicativo. Atualize a página e verifique se o navegador está atualizado.", "error");
+});

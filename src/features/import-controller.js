@@ -127,7 +127,11 @@ function setupDropZone(label, input, handler) {
     const file = event.dataTransfer.files[0];
     if (file) handler(file);
   });
-  input.addEventListener("change", () => handler(input.files[0]));
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    input.value = "";
+    if (file) handler(file);
+  });
 }
 
 function updatePeriod() {

@@ -48,10 +48,20 @@ export async function loadImageSource(source) {
 
 export async function ensureCardFonts() {
   if (!document.fonts) return;
-  await Promise.all([
-    document.fonts.load('400 72px "Cambria ComSoc"'),
-    document.fonts.load('700 72px "Cambria ComSoc"'),
-  ]);
+  let timeout;
+  try {
+    await Promise.race([
+      Promise.all([
+        document.fonts.load('400 72px "Cambria ComSoc"'),
+        document.fonts.load('700 72px "Cambria ComSoc"'),
+      ]),
+      new Promise((_, reject) => {
+        timeout = setTimeout(() => reject(new Error("Tempo de carregamento das fontes excedido")), 10000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function buildIdentitySegments(record) {
